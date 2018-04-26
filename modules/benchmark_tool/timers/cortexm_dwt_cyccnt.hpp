@@ -33,8 +33,6 @@ struct cortexm4_dwt_cyccnt
 struct cortexm7_dwt_cyccnt
 #endif
 {
-	using unit = uint32_t;
-
 	static void init()
 	{
 		CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -42,7 +40,9 @@ struct cortexm7_dwt_cyccnt
 		DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 	}
 
-	static unit get_time() { return DWT->CYCCNT; }
+	static uint32_t get_time() { return DWT->CYCCNT; }
+	
+	static const char* unit_str = "ticks";
 };
 #endif
 
