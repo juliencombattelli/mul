@@ -1,13 +1,13 @@
 list(APPEND mul-core-headers
-    include/delegate.hpp
-    include/event.hpp
-    include/factory.hpp
-    include/memory.hpp
-    include/non_copyable.hpp
-    include/timer.hpp
-    include/type_traits.hpp)
+    include/mul/delegate.hpp
+    include/mul/event.hpp
+    include/mul/factory.hpp
+    include/mul/memory.hpp
+    include/mul/non_copyable.hpp
+    include/mul/timer.hpp
+    include/mul/type_traits.hpp)
 
-add_library(mul-core src/event.cpp)
+add_library(mul-core src/mul/event.cpp)
 
 set_target_properties(mul-core PROPERTIES PUBLIC_HEADER "${mul-core-headers}")
 
