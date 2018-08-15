@@ -1,3 +1,14 @@
+//=============================================================================
+// Name        : function_traits.hpp
+// Author      : Julien Combattelli
+// EMail       : julien.combattelli@gmail.com
+// Date        : 14 aug. 2018
+// Version     : 1.0.0
+// Copyright   : This file is part of MUL project which is released under
+//               MIT license. See file LICENSE.txt for full license details
+// Description : Provide a type trait to inspect callable types
+//=============================================================================
+
 #ifndef MUL_CORE_FUNCTION_TRAITS_HPP_
 #define MUL_CORE_FUNCTION_TRAITS_HPP_
 
