@@ -3,7 +3,7 @@
 // Author      : Julien Combattelli
 // EMail       : julien.combattelli@gmail.com
 // Date        : 14 aug. 2018
-// Version     : 1.0.0
+// Version     : 1.1.0
 // Copyright   : This file is part of MUL project which is released under
 //               MIT license. See file LICENSE.txt for full license details
 // Description : Provide a type trait to inspect callable types
@@ -18,12 +18,12 @@ namespace mul
 {
 
 /* Type traits for a large kind of functions, methods and functors
- * After instantiation, the function_traits look like this:
- *     struct function_traits
+ * After instantiation, the function_trait look like this:
+ *     struct function_trait
  *     {
- *         using result_type = <function return type>;
- *
  *         static constexpr std::size_t arity = <argument count>;
+ *
+ *         using result_type = <function return type>;
  *
  *         using arguments_as_tuple = <tuple packaging all arguments>;
  *
@@ -34,49 +34,25 @@ namespace mul
  *             using type = <generator to get the type of the Nth argument>;
  *         };
  *     };
+ *
+ * The tuple 'arguments_as_tuple' can be used with std::apply without any modification
+ * Therefore, there will be the class type as first argument for methods
+ * Since the arity is the size of this tuple, arity will be equal to the arguments
+ *     count + 1 for methods
  */
 
-template<class F>
-struct function_traits;
-
-template<class F>
-struct function_traits<F&> : public function_traits<F>
-{};
-
-template<class F>
-struct function_traits<F&&> : public function_traits<F>
-{};
-
-// function pointer
-template<class R, class... Args>
-struct function_traits<R(*)(Args...)> : public function_traits<R(Args...)>
-{};
-
-// member function pointer
-template<class C, class R, class... Args>
-struct function_traits<R(C::*)(Args...)> : public function_traits<R(Args...)>
-{};
-
-// const member function pointer
-template<class C, class R, class... Args>
-struct function_traits<R(C::*)(Args...) const> : public function_traits<R(Args...)>
-{};
-
-// member object pointer
-template<class C, class R>
-struct function_traits<R(C::*)> : public function_traits<R(C&)>
-{};
-
-// implementation for function pointer,
-//                    member function pointer,
-//                    const member function pointer,
-//                    member object pointer
-template<class R, class... Args>
-struct function_traits<R(Args...)>
+namespace detail
 {
-    using return_type = R;
 
+template<typename F>
+struct function_trait_impl;
+
+template<typename R, typename... Args>
+struct function_trait_impl<R(Args...)>
+{
     static constexpr std::size_t arity = sizeof...(Args);
+
+    using return_type = R;
 
     using arguments_as_tuple = std::tuple<Args...>;
 
@@ -84,57 +60,95 @@ struct function_traits<R(Args...)>
     struct argument
     {
         static_assert(N < arity, "error: invalid parameter index.");
-        using type = typename std::tuple_element<N,std::tuple<Args...>>::type;
+        using type = typename std::tuple_element<N, arguments_as_tuple>::type;
     };
 };
 
-// default implementation (mostly for functors and lambdas)
-template<class F>
-struct function_traits
-{
-private:
-    using call_type = function_traits<decltype(&F::operator())>;
-public:
-    using return_type = typename call_type::return_type;
+template<bool IsFunctor, typename F>
+struct function_trait_dispatcher;
 
-    static constexpr std::size_t arity = call_type::arity - 1;
+template<typename R, typename... Args>
+struct function_trait_dispatcher<false, R(*)(Args...)> :
+        public function_trait_impl<R(Args...)> {};
 
-    using arguments_as_tuple = typename call_type::arguments_as_tuple;
+template<typename C, typename R>
+struct function_trait_dispatcher<false, R(C::*)> :
+        public function_trait_impl<R(C&)> {};
 
-    template <std::size_t N>
-    struct argument
-    {
-        static_assert(N < arity, "error: invalid parameter index.");
-        using type = typename call_type::template argument<N+1>::type;
-    };
-};
+template<typename C, typename R, typename... Args>
+struct function_trait_dispatcher<false, R(C::*)(Args...)> :
+        public function_trait_impl<R(C&, Args...)> {};
 
-template <typename _Fn, typename _Tuple, size_t... _Idx>
-constexpr decltype(auto) apply_impl(_Fn&& __f, _Tuple&& __t, std::index_sequence<_Idx...>)
-{
-    return std::invoke(std::forward<_Fn>(__f), std::get<_Idx>(std::forward<_Tuple>(__t))...);
-}
+template<typename C, typename R, typename... Args>
+struct function_trait_dispatcher<false, R(C::*)(Args...) const> :
+        public function_trait_impl<R(C&, Args...)> {};
 
-template <typename _Fn, typename _Class, typename _Tuple, size_t... _Idx>
-constexpr decltype(auto) apply_impl_memfun(_Fn&& __f, _Class&& __obj, _Tuple&& __t, std::index_sequence<_Idx...>)
-{
-    return std::invoke(std::forward<_Fn>(__f), std::forward<_Class>(__obj), std::get<_Idx>(std::forward<_Tuple>(__t))...);
-}
+template<typename C, typename R, typename... Args>
+struct function_trait_dispatcher<true, R(C::*)(Args...)> :
+        public function_trait_impl<R(Args...)> {};
 
-template <typename _Fn, typename _Tuple>
-constexpr decltype(auto) apply(_Fn&& __f, _Tuple&& __t)
-{
-    using _Indices = std::make_index_sequence<std::tuple_size_v<std::decay_t<_Tuple>>>;
-    return apply_impl(std::forward<_Fn>(__f), std::forward<_Tuple>(__t), _Indices{});
-}
+template<typename C, typename R, typename... Args>
+struct function_trait_dispatcher<true, R(C::*)(Args...) const> :
+        public function_trait_impl<R(Args...)> {};
 
-template <typename _MemFun, typename _Class, typename _Tuple>
-constexpr decltype(auto) apply(_MemFun&& __f, _Class&& __obj, _Tuple&& __t)
-{
-    using _Indices = std::make_index_sequence<std::tuple_size_v<std::decay_t<_Tuple>>>;
-    return apply_impl_memfun(std::forward<_MemFun>(__f), std::forward<_Class>(__obj), std::forward<_Tuple>(__t), _Indices{});
-}
+}  // namespace detail
+
+// Functor specialization (default)
+template<typename F>
+struct function_trait :
+        public detail::function_trait_dispatcher<true, decltype(&F::operator())> {};
+
+// Free function pointer/static method specialization
+template<typename R, typename... Args>
+struct function_trait<R(Args...)> :
+        public detail::function_trait_impl<R(Args...)> {};
+
+// Free function pointer/static method pointer specialization
+template<typename R, typename... Args>
+struct function_trait<R(*)(Args...)> :
+        public detail::function_trait_dispatcher<false, R(*)(Args...)> {};
+
+// Member object pointer specialization
+template<typename C, typename R>
+struct function_trait<R(C::*)> :
+        public detail::function_trait_dispatcher<false, R(C::*)> {};
+
+// Method specialization
+template<typename C, typename R, typename... Args>
+struct function_trait<R(C::*)(Args...)> :
+        public detail::function_trait_dispatcher<false, R(C::*)(Args...)> {};
+
+// Const method specialization
+template<typename C, typename R, typename... Args>
+struct function_trait<R(C::*)(Args...) const> :
+        public detail::function_trait_dispatcher<false, R(C::*)(Args...) const> {};
+
+// Additional specializations to remove cvr-qualifier
+template <typename T>
+struct function_trait<T&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<const T&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<volatile T&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<const volatile T&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<T&&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<const T&&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<volatile T&&> : public function_trait<T> {};
+
+template <typename T>
+struct function_trait<const volatile T&&> : public function_trait<T> {};
 
 } // namespace mul
 
 #endif // MUL_CORE_FUNCTION_TRAITS_HPP_
+
