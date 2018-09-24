@@ -3,7 +3,7 @@
 // Author      : Julien Combattelli
 // EMail       : julien.combattelli@gmail.com
 // Date        : 22 sept. 2018
-// Version     : 1.0.0
+// Version     : 1.1.0
 // Copyright   : This file is part of MUL project which is released under
 //               MIT license. See file LICENSE.txt for full license details
 // Description : Provide a portable interface to handle signals
@@ -20,6 +20,7 @@
 namespace mul
 {
 
+// List of ISO C99 signals
 enum class Signal : int
 {
     Termination             = SIGTERM,      // termination request, sent to the program
@@ -30,6 +31,9 @@ enum class Signal : int
     ArithmeticError         = SIGFPE        // erroneous arithmetic operation such as divide by zero
 };
 
+// Static class allowing to register handler to handling signals
+// Since this class use std::function, handlers can be any type of callable, like
+// function, method, functor, lambda, etc, as long as there prototype is void(mul::Signal)
 class SignalHandler
 {
 public:
