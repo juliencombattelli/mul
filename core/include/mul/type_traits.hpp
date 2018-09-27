@@ -2,8 +2,8 @@
 // Name        : type_traits.hpp
 // Author      : Julien Combattelli
 // EMail       : julien.combattelli@gmail.com
-// Date           : Sep 5, 2016
-// Version     : 1.0.0
+// Date        : Sep 5, 2016
+// Version     : 1.1.0
 // Copyright   : This file is part of MUL project which is released under
 //               MIT license. See file LICENSE.txt for full license details
 // Description : 
@@ -17,6 +17,55 @@
 #endif
 
 #include <type_traits>
+
+namespace mul 
+{
+
+#if __cplusplus < 201703L
+// if C++17 is not available, reimplement the missing type_traits within namespace mul
+    
+// bool_constant implementation from cppreference.com
+template<bool B>
+using bool_constant = std::integral_constant<bool, B>;
+	
+// conjunction implementation from cppreference.com
+template<class...> struct conjunction : std::true_type { };
+template<class B1> struct conjunction<B1> : B1 { };
+template<class B1, class... Bn>
+struct conjunction<B1, Bn...> 
+    : std::conditional_t<bool(B1::value), conjunction<Bn...>, B1> {};
+
+// disjunction implementation from cppreference.com
+template<class...> struct disjunction : std::false_type { };
+template<class B1> struct disjunction<B1> : B1 { };
+template<class B1, class... Bn>
+struct disjunction<B1, Bn...> 
+    : std::conditional_t<bool(B1::value), B1, disjunction<Bn...>>  { };
+
+// negation implementation from cppreference.com
+template<class B>
+struct negation : mul::bool_constant<!bool(B::value)> { };
+
+#else
+// if C++17 is available, just import standard version into mul namespace
+
+using std::bool_constant;
+using std::conjunction;
+using std::disjunction;
+using std::negation;
+
+#endif
+    
+template<typename T, typename... Ts>
+struct is_one_of
+{
+    static constexpr bool value = mul::disjunction<std::is_same<T, Ts>...>::value;
+};
+
+template<typename T, typename... Ts>
+struct is_one_of<T, std::tuple<Ts...>> : is_one_of<T, Ts...> {}; 
+  
+} // namespace mul 
 
 /*
  * Macro declaring a type trait checking if a class has a given method
