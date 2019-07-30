@@ -17,6 +17,8 @@
 #endif
 
 #include <type_traits>
+#include <vector>
+#include <utility>
 
 namespace mul 
 {
@@ -63,8 +65,68 @@ struct is_one_of
 };
 
 template<typename T, typename... Ts>
-struct is_one_of<T, std::tuple<Ts...>> : is_one_of<T, Ts...> {}; 
-  
+struct is_one_of<T, std::tuple<Ts...>> : is_one_of<T, Ts...> {};
+
+template<typename T>
+decltype(auto) get_type_properties()
+{
+    return std::vector<std::pair<std::string_view, bool>>
+    {
+        {"is_trivial", std::is_trivial_v<T>},
+        {"is_trivially_copyable", std::is_trivially_copyable_v<T>},
+        {"is_standard_layout", std::is_standard_layout_v<T>},
+        {"has_unique_object_representations", std::has_unique_object_representations_v<T>},
+        {"is_aggregate", std::is_aggregate_v<T>},
+
+        {"is_constructible", std::is_constructible_v<T>},
+        {"is_trivially_constructible", std::is_trivially_constructible_v<T>},
+        {"is_nothrow_constructible", std::is_nothrow_constructible_v<T>},
+
+        {"is_default_constructible", std::is_default_constructible_v<T>},
+        {"is_trivially_default_constructible", std::is_trivially_default_constructible_v<T>},
+        {"is_nothrow_default_constructible", std::is_nothrow_default_constructible_v<T>},
+
+        {"is_copy_constructible", std::is_copy_constructible_v<T>},
+        {"is_trivially_copy_constructible", std::is_trivially_copy_constructible_v<T>},
+        {"is_nothrow_copy_constructible", std::is_nothrow_copy_constructible_v<T>},
+
+        {"is_move_constructible", std::is_move_constructible_v<T>},
+        {"is_trivially_move_constructible", std::is_trivially_move_constructible_v<T>},
+        {"is_nothrow_move_constructible", std::is_nothrow_move_constructible_v<T>},
+
+        {"is_assignable", std::is_assignable_v<T, T>},
+        {"is_trivially_assignable", std::is_trivially_assignable_v<T, T>},
+        {"is_nothrow_assignable", std::is_nothrow_assignable_v<T, T>},
+
+        {"is_copy_assignable", std::is_copy_assignable_v<T>},
+        {"is_trivially_copy_assignable", std::is_trivially_copy_assignable_v<T>},
+        {"is_nothrow_copy_assignable", std::is_nothrow_copy_assignable_v<T>},
+
+        {"is_move_assignable", std::is_move_assignable_v<T>},
+        {"is_trivially_move_assignable", std::is_trivially_move_assignable_v<T>},
+        {"is_nothrow_move_assignable", std::is_nothrow_move_assignable_v<T>},
+
+        {"is_destructible", std::is_destructible_v<T>},
+        {"is_trivially_destructible", std::is_trivially_destructible_v<T>},
+        {"is_nothrow_destructible", std::is_nothrow_destructible_v<T>},
+
+        {"is_swappable_with", std::is_swappable_with_v<T, T>},
+        {"is_swappable", std::is_swappable_v<T>},
+        {"is_nothrow_swappable_with", std::is_nothrow_swappable_with_v<T, T>},
+        {"is_nothrow_swappable", std::is_nothrow_swappable_v<T>}
+    };
+}
+
+template<typename P>
+void print_type_properties(P&& properties)
+{
+    std::cout << std::boolalpha;
+    for(const auto& prop : properties)
+    {
+        std::cout << prop.first << " = " << prop.second << "\n";
+    }
+}
+
 } // namespace mul 
 
 /*
