@@ -2,8 +2,8 @@
 // Name        : type_traits.hpp
 // Author      : Julien Combattelli
 // EMail       : julien.combattelli@gmail.com
-// Date           : Sep 5, 2016
-// Version     : 1.0.0
+// Date        : Oct 20, 2020
+// Version     : 1.0.1
 // Copyright   : This file is part of MUL project which is released under
 //               MIT license. See file LICENSE.txt for full license details
 // Description : 
@@ -17,6 +17,23 @@
 #endif
 
 #include <type_traits>
+
+/*
+ * Note: These macros are not needed anymore with C++20 concepts.
+ *
+ * Instead of doing this with older version of C++:
+ *
+ * MUL_DECLARE_HAS_METHOD_TRAITS(has_reserve, reserve);
+ * cout << has_reserve<std::vector<int>, void(int)>::value;
+ *
+ * one could just do this instead (macro-free :D):
+ *
+ * template <typename TContainer>
+ * constexpr bool has_reserve = requires { 
+ *   std::declval<TContainer>().reserve(std::declval<int>());
+ * };
+ * cout << has_reserve<std::vector<int>>;
+ */
 
 /*
  * Macro declaring a type trait checking if a class has a given method
